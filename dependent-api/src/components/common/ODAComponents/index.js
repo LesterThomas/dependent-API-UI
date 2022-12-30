@@ -1,27 +1,33 @@
 
 import React, { Component } from 'react';
-import DataTable from 'react-data-table-component';
 import config from '../../../config/config';
+import styled from 'styled-components';
+
+const ComponentsTable = styled.table`
+  border: 0px solid white;
+  border-spacing: 0px;
+  display: inline-table;
+  width: 30%;
+  margin: 10px;
+  font-size: 13px;
+`;
+const ComponentsTD = styled.td`
+  border: 1px solid white;
+  padding: 5px;
+`;
+const ComponentsTH = styled.th`
+  border: 1px solid white;
+  padding: 5px;
+`;
+const ComponentsTR = styled.tr`
+  border: 1px solid white;
+`;
 
 class ODAComponents extends Component {
 
   constructor(props) {
     super(props);
-    this.state = {
-      columns: [     
-        {
-        name: 'Name',
-        selector: row => row.name,
-        sortable: true
-        },
-        {
-          name: 'Deployment Status',
-          selector: row => row.deploymentStatus,
-          sortable: true
-      }
-      ],
-      data: []
-      };
+    this.state = {components: [] };
       console.log('in constructor');
       console.log(this.state);
   };
@@ -32,19 +38,7 @@ class ODAComponents extends Component {
       .then((json) => {
         console.log('in getODAComponents');
         console.log(json);
-        var apiList = json.items;
-        var componentStateData = [];
-        for (var i = 0; i < apiList.length; i++) {
-          var componentItem = {
-            id: i,
-            name: apiList[i].metadata.name,
-            deploymentStatus: apiList[i].status["summary/status"].deployment_status
-          }
-          console.log('Adding ' + componentItem.name);
-          componentStateData.push(componentItem);
-        }
-        this.setState({ data: componentStateData })
-
+        this.setState({ components: json.items })
       });
     }
 
@@ -60,14 +54,52 @@ class ODAComponents extends Component {
       <div>
         <header>
           <p>Components in the current cluster</p>
-          <DataTable
-              columns={this.state.columns}
-              data={this.state.data}
-              selectableRows
-              highlightOnHover
-              striped
-              selectableRowsSingle
-          />
+          {this.state.components.map(component => (
+            <ComponentsTable>
+              <thead>
+                <ComponentsTR>
+                  <ComponentsTH colSpan="2">{component.metadata.name}</ComponentsTH>
+                </ComponentsTR>
+              </thead>
+              <tbody>
+              <ComponentsTR>
+                  <ComponentsTD>Deployment Status:</ComponentsTD>
+                  <ComponentsTD>{component.status['summary/status'].deployment_status}</ComponentsTD>
+                </ComponentsTR>
+                <ComponentsTR>
+                  <ComponentsTD>Type:</ComponentsTD>
+                  <ComponentsTD>{component.spec.type}</ComponentsTD>
+                </ComponentsTR>
+                <ComponentsTR>
+                  <ComponentsTD>Maintainers:</ComponentsTD>
+                  <ComponentsTD>
+                    {component.spec.maintainers.map(maintainer => (
+                      <span>{maintainer.name} ({maintainer.email})</span>
+                    ))}
+                  </ComponentsTD>
+                </ComponentsTR>                
+
+                <ComponentsTR>
+                  <ComponentsTD>Exposed APIs:</ComponentsTD>
+                  <ComponentsTD>
+                      {component.status.exposedAPIs.map(exposedAPI => (
+                        <div>{exposedAPI.name} <span style={{color:"grey"}}> (core)</span></div>
+                    ))}
+                      <div>{component.status.securityAPIs.partyrole.name} <span style={{color:"grey"}}> (security)</span></div>
+                      {component.status.managementAPIs.map(exposedAPI => (
+                        <div>{exposedAPI.name} <span style={{color:"grey"}}> (management)</span></div>
+                    ))}
+                  </ComponentsTD>
+                </ComponentsTR>
+                <ComponentsTR>
+                  <ComponentsTD>Dependent APIs:</ComponentsTD>
+                  <ComponentsTD>
+                    <div></div>
+                  </ComponentsTD>
+                </ComponentsTR>                
+              </tbody>
+            </ComponentsTable>
+            ))}            
         </header>
       </div>
     );
