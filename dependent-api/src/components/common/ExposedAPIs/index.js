@@ -35,7 +35,7 @@ class ExposedAPIs extends Component {
         },
         {
           name: 'Ready',
-          selector: row => <RAGStatus state={row.ready} />
+          selector: row => <RAGStatus status={row.ready} />
         },
       ],
       data: []

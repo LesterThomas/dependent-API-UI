@@ -13,39 +13,80 @@ const CompTable = styled.table`
   display: inline-table;
   width: 30%;
   margin: 10px;
-  font-size: 13px;
-`;
+  font-size: 13px; `;
 const CompTableWide = styled.table`
   border: 0px solid white;
   border-spacing: 0px;
   display: inline-table;
   width: 90%;
   margin: 10px;
-  font-size: 13px;
-`;
+  font-size: 13px; `;
 const CompTDLeft = styled.td`
   border: 1px solid white;
   padding: 5px;
-  text-align: left;
-`;
+  text-align: left; `;
 const CompTDRight = styled.td`
   border: 1px solid white;
   padding: 5px;
-  text-align: right;
-`;
+  text-align: right; `;
 const CompTH = styled.th`
   border: 1px solid white;
-  padding: 5px;
-`;
+  padding: 5px; `;
 const CompTR = styled.tr`
-  border: 1px solid white;
-`;
+  border: 1px solid white; `;
 
 function getRAG(inDeploymentStatus){
   var ragColor = "amber"
   if (inDeploymentStatus === 'Complete') {
     ragColor = "green"
   }
+  return ragColor
+}
+
+function getAPIRAG(inAPIStatus){
+  var ragColor = "amber"
+  if (inAPIStatus) {
+    ragColor = "green"
+  }
+  return ragColor
+}
+
+function getResourceRAG(inTitle, inResource) {
+  var ragColor = "grey"
+  switch (inTitle) {
+    case "Deployments":
+      if (inResource.status.readyReplicas === inResource.status.replicas) { 
+        ragColor = "green"
+      } else {
+        ragColor = "amber"
+      }
+      break;
+    case "Services":
+      // for services we need to check the endpoints that have been added to the service status
+      if ('endpoints' in inResource.status) {
+        ragColor = "amber"
+        if (inResource.status.endpoints.length > 0) {
+          console.log('inResource.status.endpoints')
+          console.log(inResource.status.endpoints)
+          for (var i = 0; i < inResource.status.endpoints.length; i++) {
+            if (inResource.status.endpoints[i].addresses) {
+              ragColor = "green"
+            } 
+          }
+        }
+      }
+      break;
+    case "Persistent Volume Claims":
+      if (inResource.status.phase === 'Bound') {
+        ragColor = "green"
+      } else {
+        ragColor = "amber"
+      }
+      break;
+
+      default:
+        break;
+    }
   return ragColor
 }
 
@@ -56,7 +97,7 @@ function ComponentDetails(props) {
   <tbody> 
     <CompTR>
       <CompTDRight>Deployment Status:</CompTDRight>
-      <CompTDLeft><RAGStatus state={getRAG(component.status['summary/status'].deployment_status)} /> &nbsp; {component.status['summary/status'].deployment_status}</CompTDLeft>
+      <CompTDLeft><RAGStatus status={getRAG(component.status['summary/status'].deployment_status)} /> &nbsp; {component.status['summary/status'].deployment_status}</CompTDLeft>
     </CompTR>
     <CompTR>
       <CompTDRight>Type:</CompTDRight>
@@ -73,12 +114,13 @@ function ComponentDetails(props) {
     <CompTR>
       <CompTDRight>Exposed APIs:</CompTDRight>
       <CompTDLeft>
-          {component.status.exposedAPIs.map(exposedAPI => (
-            <div>{exposedAPI.name} <span style={{color:"grey"}}> (core)</span></div>
+        
+        {component.status.exposedAPIs.map(exposedAPI => (
+            <div><RAGStatus size="10px" status={getAPIRAG(exposedAPI.ready)} /> &nbsp; {exposedAPI.name} <span style={{color:"grey"}}> (core)</span></div>
         ))}
-          <div>{component.status.securityAPIs.partyrole.name} <span style={{color:"grey"}}> (security)</span></div>
-          {component.status.managementAPIs.map(exposedAPI => (
-            <div>{exposedAPI.name} <span style={{color:"grey"}}> (management)</span></div>
+        <div><RAGStatus size="10px" status={getAPIRAG(component.status.securityAPIs.partyrole.ready)} /> &nbsp; {component.status.securityAPIs.partyrole.name} <span style={{color:"grey"}}> (security)</span></div>
+        {component.status.managementAPIs.map(managementAPI => (
+            <div><RAGStatus size="10px" status={getAPIRAG(managementAPI.ready)} /> &nbsp; {managementAPI.name} <span style={{color:"grey"}}> (management)</span></div>
         ))}
       </CompTDLeft>
     </CompTR>
@@ -91,23 +133,25 @@ function ComponentDetails(props) {
   </tbody> 
   );}    
 
-
 function ResourceDetails(props) {
-  console.log('in ResourceDetails for ' + props.title)
   var resources = props.resources
-  console.log(resources)
+  
+  // console.log('in ResourceDetails for ' + props.title)
+  //  console.log(resources)
+  
 
   return (
   <tbody>
     <CompTR>
       <CompTDRight>{props.title}:</CompTDRight>
       <CompTDLeft>
-        {resources.map(resource => ( <div>{resource.metadata.name}</div> ))}
+        {resources.map(resource => ( 
+          <div><RAGStatus size="10px" status={getResourceRAG(props.title, resource)} /> &nbsp; {resource.metadata.name}</div>
+        ))}
       </CompTDLeft>
     </CompTR>
   </tbody>
   );}
-
 
 export class ODAComponents extends Component {
 
@@ -189,8 +233,8 @@ export class ODAComponent extends Component {
         .then((res) => res.json())
         .then((json) => {
             
-          console.log('in getResourcess for ' + inResourceName);
-          console.log(json);
+          // console.log('in getResourcess for ' + inResourceName);
+          // console.log(json);
           var newState = {}
           newState[inResourceName] = json.items
           if (json.items.length > 0) {
@@ -205,6 +249,7 @@ export class ODAComponent extends Component {
     this.getResources(config.AppsAPI, config.DeploymentsResource, 'deployments');
     this.getResources(config.AppsAPI, config.StatefulSetsResource, 'statefulsets');
     this.getResources(config.CoreAPI, config.ServicesResource, 'services');
+    this.getResources(config.CoreAPI, config.EndpointsResource, 'endpoints');
     this.getResources(config.BatchAPI, config.JobsResource, 'jobs');
     this.getResources(config.CronJobAPI, config.CronJobsResource, 'cronjobs');
     this.getResources(config.CoreAPI, config.PersistentVolumeClaimsResource, 'persistentvolumeclaims');
@@ -212,7 +257,7 @@ export class ODAComponent extends Component {
     this.getResources(config.CoreAPI, config.SecretsResource, 'secrets');
     this.getResources(config.CoreAPI, config.ServiceAccountsResource, 'serviceaccounts');
     this.getResources(config.RbacAPI, config.RoleResource, 'roles');
-    this.getResources(config.RbacAPI, config.RoleBindingResource, 'rolebindings');
+    this.getResources(config.RbacAPI, config.RoleBindingResource, 'rolebindings');    
   }
 
   getRAG(inDeploymentStatus){
@@ -225,6 +270,24 @@ export class ODAComponent extends Component {
 
   render() {
     var component = this.state.component
+    // add the endpoints data into the services status
+    if ('services' in this.state) {
+        this.state.services.forEach(service => {
+          if ('endpoints' in this.state) {
+            if (!('endpoints' in service.status)) {
+            this.state.endpoints.forEach(endpoint => {
+              if (service.metadata.name === endpoint.metadata.name) {
+                console.log('Adding endpoints to ' + service.metadata.name)
+                service.status.endpoints = endpoint.subsets
+                console.log(service.status)
+              }
+            })
+          }
+        }
+      })
+    }
+
+
     return (
       <div class="Component-body">
 

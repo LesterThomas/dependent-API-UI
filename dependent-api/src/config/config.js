@@ -14,6 +14,7 @@ const config = {
     DeploymentsResource: 'deployments/',
     StatefulSetsResource: 'statefulsets/',
     ServicesResource: 'services/',
+    EndpointsResource: 'endpoints/',
     JobsResource: 'jobs/',
     CronJobsResource: 'cronjobs/',
     PersistentVolumeClaimsResource: 'persistentvolumeclaims/',
