@@ -4,6 +4,7 @@ import HomePage from './components/pages/HomePage';
 import ODAComponentsPage from './components/pages/ODAComponentsPage';
 import ODAComponentPage from './components/pages/ODAComponentPage';
 import ManageDependenciesPage from './components/pages/ManageDependenciesPage';
+import ExposedAPIPage from './components/pages/ExposedAPIPage';
 
 const NavTabs = () => (
   <ul style={{
@@ -62,6 +63,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/components" element={<ODAComponentsPage />} />
             <Route path="/components/:name" element={<ODAComponentPage />} />
+            <Route path="/exposedapi/:name" element={<ExposedAPIPage />} />
             <Route path="/dependencies" element={<ManageDependenciesPage />} />
           </Routes>
         </div>

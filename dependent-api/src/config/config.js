@@ -23,7 +23,8 @@ const config = {
     ServiceAccountsResource: 'serviceaccounts/',
     RoleResource: 'roles/',
     RoleBindingResource: 'rolebindings/',
-    LabelSelector: '?labelSelector=oda.tmforum.org/componentName='
+    ComponentLabelSelector: '?labelSelector=oda.tmforum.org/componentName=',
+    APILabelSelector: '?labelSelector=oda.tmforum.org/componentName='
   };
 // example K8s GET request to get deployments for a component:
 // https://rke.tmforum.org/k8s/clusters/c-7rxjk/apis/apps/v1/namespaces/components/deployments?labelSelector=oda.tmforum.org%2FcomponentName%3Dr4-productinventory&limit=500

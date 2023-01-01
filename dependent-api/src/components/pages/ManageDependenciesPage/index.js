@@ -1,5 +1,5 @@
 import React from 'react';
-import ExposedAPIs from '../../common/ExposedAPIs';
+import { ExposedAPIs } from '../../common/ExposedAPIs';
 
 const ManageDependenciesPage = () => {
   return (
