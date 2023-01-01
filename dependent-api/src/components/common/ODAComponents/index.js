@@ -94,6 +94,10 @@ function getResourceRAG(inTitle, inResource) {
 
 function ComponentDetails(props) {
   var component = props.component
+  if (!('status' in component)) {
+    return (<p> </p>)
+  }
+
   return (
       
   <tbody> 
@@ -136,11 +140,7 @@ function ComponentDetails(props) {
   );}    
 
 function ResourceDetails(props) {
-  var resources = props.resources
-  
-  // console.log('in ResourceDetails for ' + props.title)
-  //  console.log(resources)
-  
+  var resources = props.resources  
 
   return (
   <tbody>
@@ -164,11 +164,11 @@ export class ODAComponents extends Component {
   };
 
   getODAComponents() {
-    fetch(config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ComponentsResource)
+    var queryAPIURL = config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ComponentsResource;
+    console.log(queryAPIURL)
+    fetch(queryAPIURL)
       .then((res) => res.json())
       .then((json) => {
-        console.log('in getODAComponents');
-        console.log(json);
         this.setState({ components: json.items })
       });
       
@@ -186,7 +186,7 @@ export class ODAComponents extends Component {
 
   render() {
     return (
-      <div class="Component-body">
+      <div className="Component-body">
         <p>Components in the current cluster</p>
         {this.state.components.map(component => (
           <CompTable >
@@ -212,41 +212,27 @@ export class ODAComponent extends Component {
   };
 
   getODAComponent() {
-    fetch(config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ComponentsResource + this.state.component.metadata.name)
-      .then((res) => res.json())
-      .then((json) => {
-        console.log('in getODAComponents');
-        console.log(json);
-        this.setState({component: json})
-      });
-    }
-
-  getDeployments() {
-    const queryAPIURL = config.k8sAPIBaseUrl + config.AppsAPI + 'namespaces/' + config.ComponentsNamespace + config.DeploymentsResource + config.ComponentLabelSelector + this.state.component.metadata.name
+    var queryAPIURL = config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ComponentsResource + this.state.component.metadata.name;
     console.log(queryAPIURL)
     fetch(queryAPIURL)
       .then((res) => res.json())
       .then((json) => {
-        console.log('in getDeployments');
-        console.log(json);
-        this.setState({deployments: json.items})
+        json.metadata.name = this.state.component.metadata.name;
+        this.setState({component: json})
       });
     }
-    getResources(inAPI, inResource, inResourceName) {
-      const queryAPIURL = config.k8sAPIBaseUrl + inAPI + 'namespaces/' + config.ComponentsNamespace + inResource + config.ComponentLabelSelector + this.state.component.metadata.name
-      console.log(queryAPIURL)
-      fetch(queryAPIURL)
-        .then((res) => res.json())
-        .then((json) => {
-          // console.log('in getResourcess for ' + inResourceName);
-          // console.log(json);
-          var newState = {}
-          newState[inResourceName] = json.items
-          //if (json.items.length > 0) {
-            this.setState(newState)
-          //}
-        });
-      }
+  
+  getResources(inAPI, inResource, inResourceName) {
+    const queryAPIURL = config.k8sAPIBaseUrl + inAPI + 'namespaces/' + config.ComponentsNamespace + inResource + config.ComponentLabelSelector + this.state.component.metadata.name
+    console.log(queryAPIURL)
+    fetch(queryAPIURL)
+      .then((res) => res.json())
+      .then((json) => {
+        var newState = {}
+        newState[inResourceName] = json.items
+        this.setState(newState)
+      });
+    }
   
   refreshData() {
     this.getODAComponent();
@@ -264,7 +250,7 @@ export class ODAComponent extends Component {
     this.getResources(config.RbacAPI, config.RoleBindingResource, 'rolebindings');  
     // refresh the data every 5 seconds if the deployment is not complete, otherwise every 30 seconds
     var interval = 5000
-    if ('status' in this.state.component) {
+    if (('status' in this.state.component) && (this.state.component.status !== 'Failure')) {
       if (this.state.component.status['summary/status'].deployment_status === 'Complete') {
         interval = 30000
       }
@@ -289,6 +275,17 @@ export class ODAComponent extends Component {
 
   render() {
     var component = this.state.component
+    // if the component is not found then return a 404 message
+    if ('code' in component) {
+      if (component.code === 404) {
+        return (
+          <div className="Component-body">
+            <p>{component.message}</p>
+          </div>
+        )
+      }
+    }
+
     // add the endpoints data into the services status
     if ('services' in this.state) {
         this.state.services.forEach(service => {
@@ -296,9 +293,7 @@ export class ODAComponent extends Component {
             if (!('endpoints' in service.status)) {
             this.state.endpoints.forEach(endpoint => {
               if (service.metadata.name === endpoint.metadata.name) {
-                console.log('Adding endpoints to ' + service.metadata.name)
                 service.status.endpoints = endpoint.subsets
-                console.log(service.status)
               }
             })
           }
@@ -308,7 +303,7 @@ export class ODAComponent extends Component {
 
 
     return (
-      <div class="Component-body">
+      <div className="Component-body">
 
         <CompTableWide>
           <thead>
@@ -316,7 +311,7 @@ export class ODAComponent extends Component {
               <CompTH colSpan="2">Component: {component.metadata.name}</CompTH>
             </CompTR>
           </thead>
-          {('status' in this.state.component) && <ComponentDetails component={component} />}
+          {('status' in component) && <ComponentDetails component={component} />}
           {('deployments' in this.state) && <ResourceDetails title="Deployments" resources={this.state.deployments}/>} 
           {('statefulsets' in this.state) && <ResourceDetails title="Stateful Sets" resources={this.state.statefulsets}/>}
           {('services' in this.state) && <ResourceDetails title="Services" resources={this.state.services}/>}

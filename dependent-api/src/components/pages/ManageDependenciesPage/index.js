@@ -3,7 +3,7 @@ import { ExposedAPIs } from '../../common/ExposedAPIs';
 
 const ManageDependenciesPage = () => {
   return (
-    <div class="Page-body">
+    <div className="Page-body">
       <h1>Manage API Dependencies</h1>
       <ExposedAPIs />
     </div>

@@ -4,9 +4,8 @@ import { useParams } from 'react-router-dom';
 
 const ExposedAPIPage = () => {
   const { name } = useParams();
-  console.log('ExposedAPIPage: name = ' + name)
   return (
-    <div class="Page-body">
+    <div className="Page-body">
       <ExposedAPI name={name}/>
     </div>
   );

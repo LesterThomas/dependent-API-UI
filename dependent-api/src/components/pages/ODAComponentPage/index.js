@@ -6,7 +6,7 @@ const ODAComponentPage = () => {
   const { name } = useParams();
   console.log('ODAComponentPage: name = ' + name)
   return (
-    <div class="Page-body">
+    <div className="Page-body">
       <ODAComponent name={name}/>
     </div>
   );

@@ -3,7 +3,7 @@ import { ODAComponents } from '../../common/ODAComponents';
 
 const ODAComponentsPage = () => {
   return (
-    <div class="Page-body">
+    <div className="Page-body">
       <h1>View Components</h1>
       <ODAComponents />
     </div>

@@ -12,6 +12,14 @@ function ResourceDetails(props) {
     <div><RAGStatus size="10px" status={getResourceRAG(props.title, resource)} /> &nbsp; {resource.metadata.name}</div>
   );}
 
+  function getAPIRAG(inAPIStatusImplementation){
+    var ragColor = "amber"
+    if ((inAPIStatusImplementation) && (inAPIStatusImplementation.ready)) {
+      ragColor = "green"
+    }
+    return ragColor
+  }
+
 function getResourceRAG(inTitle, inResource) {
   var ragColor = "grey"
   switch (inTitle) {
@@ -73,16 +81,12 @@ export class ExposedAPIs extends Component {
       ],
       data: []
       };
-      console.log('in constructor');
-      console.log(this.state);
   };
 
   getExposedAPIs() {
     fetch(config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ExposedAPIsResource)
       .then((res) => res.json())
       .then((json) => {
-        console.log('in getExposedAPIs');
-        console.log(json);
         var apiList = json.items;
         var apiStateData = [];
         for (var i = 0; i < apiList.length; i++) {
@@ -99,7 +103,6 @@ export class ExposedAPIs extends Component {
             gatewayUrl: apiList[i].status.apiStatus.url,
             ready: ready
           }
-          console.log('Adding ' + apiItem.name);
           apiStateData.push(apiItem);
         }
         this.setState({ data: apiStateData })
@@ -113,7 +116,7 @@ export class ExposedAPIs extends Component {
   render() {
     return (
   
-      <div class="Component-body">
+      <div className="Component-body">
         <p>APIs exposed in the current cluster</p>
         <DataTable
             columns={this.state.columns}
@@ -137,11 +140,12 @@ export class ExposedAPI extends Component {
   };
 
   getExposedAPI() {
-    fetch(config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ExposedAPIsResource + this.state.exposedAPI.metadata.name)
+    const queryAPIURL = config.k8sAPIBaseUrl + config.ODAAPI + config.ODAAPIVersion + 'namespaces/' + config.ComponentsNamespace + config.ExposedAPIsResource + this.state.exposedAPI.metadata.name
+    console.log(queryAPIURL)
+    fetch(queryAPIURL)
       .then((res) => res.json())
       .then((json) => {
-        console.log('in getExposedAPIs');
-        console.log(json);
+        json.metadata.name = this.state.exposedAPI.metadata.name;
         this.setState({exposedAPI: json})
       });
     }
@@ -153,8 +157,6 @@ export class ExposedAPI extends Component {
       .then((res) => res.json())
       .then((json) => {
           
-        console.log('in getResource for ' + inResourceName);
-        console.log(json);
         var newState = {}
         newState[json.kind] = json
         this.setState(newState)
@@ -205,14 +207,22 @@ export class ExposedAPI extends Component {
 
   render() {
     var exposedAPI = this.state.exposedAPI
-    console.log('Rendering ExposedAPI ' + exposedAPI.metadata.name)
-    console.log(this.state)
+    // if the exposedAPI is not found then return a 404 message
+    if ('code' in exposedAPI) {
+      if (exposedAPI.code === 404) {
+        return (
+          <div className="Component-body">
+            <p>{exposedAPI.message}</p>
+          </div>
+        )
+      }
+    }
+
     // add the endpoints data into the services status
     if ('Service' in this.state) {
       if ('Endpoints' in this.state) {
         if (!('Endpoints' in this.state.Service.status)) {
           if (this.state.Service.metadata.name === this.state.Endpoints.metadata.name) {
-            console.log('Adding endpoints to ' + this.state.Service.metadata.name)
             var newService = this.state.Service
             newService.status.Endpoints = this.state.Endpoints.subsets
             this.setState({Service: newService})
@@ -223,7 +233,7 @@ export class ExposedAPI extends Component {
 
 
     return (
-      <div class="Component-body">
+      <div className="Component-body">
 
         <CompTableWide>
           <thead>
@@ -238,7 +248,7 @@ export class ExposedAPI extends Component {
             </CompTR>
             <CompTR>
               <CompTDRight>Cluster URL:</CompTDRight>
-              <CompTDLeft>{('status' in exposedAPI) && (exposedAPI.status.apiStatus.implementation + '.components.svc.cluster.local')}</CompTDLeft>
+              <CompTDLeft>{('status' in exposedAPI) && (<span> <RAGStatus size="10px" status={getAPIRAG(exposedAPI.status.implementation)} /> &nbsp; {exposedAPI.status.apiStatus.implementation + '.components.svc.cluster.local'} </span>)}</CompTDLeft>
             </CompTR>          
             <CompTR>
               <CompTDRight>Gateway URL:</CompTDRight>
