@@ -12,6 +12,16 @@ function ResourceDetails(props) {
     <div><RAGStatus size="10px" status={getResourceRAG(props.title, resource)} /> &nbsp; {resource.metadata.name}</div>
   );}
 
+function ResourcesDetails(props) {
+  var resources = props.resources
+  return (
+    <div>
+      {resources.map(resource => (
+        <div><RAGStatus size="10px" status={getResourceRAG(props.title, resource)} /> &nbsp; {resource.metadata.name}</div>
+      ))}
+    </div>      
+  );}
+  
   function getAPIRAG(inAPIStatusImplementation){
     var ragColor = "amber"
     if ((inAPIStatusImplementation) && (inAPIStatusImplementation.ready)) {
@@ -36,6 +46,27 @@ function getResourceRAG(inTitle, inResource) {
               } 
             }
           }
+        }
+      }
+      break;
+
+    case "Pods":
+      // for pods we need to check the status of the pod
+      // a pod is ready if all its containers are ready
+      if (inResource.status.containerStatuses) {
+        ragColor = "amber"
+        var allContainersReady = true
+        for (var j = 0; j < inResource.status.containerStatuses.length; j++) {
+          if (!inResource.status.containerStatuses[j].ready) {
+            allContainersReady = false
+            // if the state is waiting then make status red
+            if (inResource.status.containerStatuses[j].state.waiting) {
+              ragColor = "red"
+            }
+          }
+        }
+        if (allContainersReady) {
+          ragColor = "green"
         }
       }
       break;
@@ -147,6 +178,9 @@ export class ExposedAPI extends Component {
       .then((json) => {
         json.metadata.name = this.state.exposedAPI.metadata.name;
         this.setState({exposedAPI: json})
+        this.getResource(config.CoreAPI, config.ServicesResource, json.spec.implementation);
+        this.getResource(config.CoreAPI, config.EndpointsResource, json.spec.implementation);
+  
       });
     }
 
@@ -155,37 +189,34 @@ export class ExposedAPI extends Component {
     console.log(queryAPIURL)
     fetch(queryAPIURL)
       .then((res) => res.json())
-      .then((json) => {
-          
+      .then((json) => {  
         var newState = {}
         newState[json.kind] = json
         this.setState(newState)
-        
+        if (inResource === config.ServicesResource) {
+          var keys = Object.keys(json.spec.selector)
+          var selector = config.LabelSelector + keys[0] + '=' + json.spec.selector[keys[0]]
+          this.getResources(config.CoreAPI, config.PodsResource, selector, 'pods');
+        }
       });
     }
-  
+
+  getResources(inAPI, inResource, inResourceSelector, inResourceName) {
+    const queryAPIURL = config.k8sAPIBaseUrl + inAPI + 'namespaces/' + config.ComponentsNamespace + inResource + inResourceSelector
+    console.log(queryAPIURL)
+    fetch(queryAPIURL)
+      .then((res) => res.json())
+      .then((json) => {
+        var newState = {}
+        newState[inResourceName] = json.items
+        this.setState(newState)
+        
+      });
+    }  
+
   refreshData() {
     this.getExposedAPI();
-    if ('spec' in this.state.exposedAPI) {
-      this.getResource(config.CoreAPI, config.ServicesResource, this.state.exposedAPI.spec.implementation);
-      this.getResource(config.CoreAPI, config.EndpointsResource, this.state.exposedAPI.spec.implementation);
-    }
-
-    /*
-    this.getResources(config.AppsAPI, config.DeploymentsResource, 'deployments');
-    this.getResources(config.AppsAPI, config.StatefulSetsResource, 'statefulsets');
-    this.getResources(config.CoreAPI, config.ServicesResource, 'services');
-    this.getResources(config.CoreAPI, config.EndpointsResource, 'endpoints');
-    this.getResources(config.BatchAPI, config.JobsResource, 'jobs');
-    this.getResources(config.CronJobAPI, config.CronJobsResource, 'cronjobs');
-    this.getResources(config.CoreAPI, config.PersistentVolumeClaimsResource, 'persistentvolumeclaims');
-    this.getResources(config.CoreAPI, config.ConfigMapsResource, 'configmaps');
-    this.getResources(config.CoreAPI, config.SecretsResource, 'secrets');
-    this.getResources(config.CoreAPI, config.ServiceAccountsResource, 'serviceaccounts');
-    this.getResources(config.RbacAPI, config.RoleResource, 'roles');
-    this.getResources(config.RbacAPI, config.RoleBindingResource, 'rolebindings');  
-    */
-    // refresh the data every 5 seconds if the deployment is not complete, otherwise every 30 seconds
+    // refresh the data every 5 seconds i
     var interval = 5000
     this.timeoutFunction = setTimeout(() => { this.refreshData() }, interval);
   }
@@ -252,11 +283,15 @@ export class ExposedAPI extends Component {
             </CompTR>          
             <CompTR>
               <CompTDRight>Gateway URL:</CompTDRight>
-              <CompTDLeft>{('status' in exposedAPI) && (exposedAPI.status.apiStatus.url)}</CompTDLeft>
+              <CompTDLeft>{('status' in exposedAPI) && (<span> <RAGStatus size="10px" status={getAPIRAG(exposedAPI.status.implementation)} /> &nbsp; {exposedAPI.status.apiStatus.url} </span>)}</CompTDLeft>
             </CompTR>          
             <CompTR>
               <CompTDRight>Service:</CompTDRight>
               <CompTDLeft>{('Service' in this.state) && ( <ResourceDetails title="Service" resource={this.state.Service}/> )}</CompTDLeft>
+            </CompTR>          
+            <CompTR>
+              <CompTDRight>Pods:</CompTDRight>
+              <CompTDLeft>{('pods' in this.state) && ( <ResourcesDetails title="Pods" resources={this.state.pods}/> )}</CompTDLeft>
             </CompTR>          
           </tbody>
         </CompTableWide>
@@ -264,19 +299,3 @@ export class ExposedAPI extends Component {
     );
   }
 };
-
-/*
-          {('status' in this.state.component) && <ComponentDetails component={component} />}
-          {('deployments' in this.state) && <ResourceDetails title="Deployments" resources={this.state.deployments}/>} 
-          {('statefulsets' in this.state) && <ResourceDetails title="Stateful Sets" resources={this.state.statefulsets}/>}
-          {('services' in this.state) && <ResourceDetails title="Services" resources={this.state.services}/>}
-          {('jobs' in this.state) && <ResourceDetails title="Jobs" resources={this.state.jobs}/>}
-          {('cronjobs' in this.state) && <ResourceDetails title="CronJobs" resources={this.state.cronjobs}/>}
-          {('persistentvolumeclaims' in this.state) && <ResourceDetails title="Persistent Volume Claims" resources={this.state.persistentvolumeclaims}/>}
-          {('configmaps' in this.state) && <ResourceDetails title="Config Maps" resources={this.state.configmaps}/>}
-          {('secrets' in this.state) && <ResourceDetails title="Secrets" resources={this.state.secrets}/>}
-          {('serviceaccounts' in this.state) && <ResourceDetails title="Service Accounts" resources={this.state.serviceaccounts}/>}
-          {('roles' in this.state) && <ResourceDetails title="Roles" resources={this.state.roles}/>}
-          {('rolebindings' in this.state) && <ResourceDetails title="Role Bindings" resources={this.state.rolebindings}/>}
-
-*/

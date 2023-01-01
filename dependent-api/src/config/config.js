@@ -13,6 +13,7 @@ const config = {
     RbacAPI: 'apis/rbac.authorization.k8s.io/v1/',
     DeploymentsResource: 'deployments/',
     StatefulSetsResource: 'statefulsets/',
+    PodsResource: 'pods/',
     ServicesResource: 'services/',
     EndpointsResource: 'endpoints/',
     JobsResource: 'jobs/',
@@ -24,7 +25,7 @@ const config = {
     RoleResource: 'roles/',
     RoleBindingResource: 'rolebindings/',
     ComponentLabelSelector: '?labelSelector=oda.tmforum.org/componentName=',
-    APILabelSelector: '?labelSelector=oda.tmforum.org/componentName='
+    LabelSelector: '?labelSelector=',
   };
 // example K8s GET request to get deployments for a component:
 // https://rke.tmforum.org/k8s/clusters/c-7rxjk/apis/apps/v1/namespaces/components/deployments?labelSelector=oda.tmforum.org%2FcomponentName%3Dr4-productinventory&limit=500
